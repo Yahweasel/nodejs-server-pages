@@ -1,0 +1,32 @@
+{
+  "name": "nodejs-server-pages",
+  "version": "0.1.0",
+  "description": "FastCGI server for using Node.JS in server-side templated pages, in the style of PHP.",
+  "main": "njsp.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yahweasel/nodejs-server-pages.git"
+  },
+  "keywords": [
+    "fastcgi",
+    "php",
+    "cgi",
+    "server",
+    "template",
+    "templating"
+  ],
+  "author": "Yahweasel",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Yahweasel/nodejs-server-pages/issues"
+  },
+  "homepage": "https://github.com/Yahweasel/nodejs-server-pages#readme",
+  "dependencies": {
+    "cookie": "^0.4.0",
+    "node-fastcgi": "^1.3.3",
+    "sqlite3": "^4.1.1"
+  }
+}
