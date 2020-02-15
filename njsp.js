@@ -84,7 +84,7 @@ function createServer(config) {
  * @internal
  */
 function spawnThread() {
-    var c = cp.fork("./runner.js");
+    var c = cp.fork(__dirname + "/runner.js");
     c.res = null;
 
     c.on("message", (msg) => {
