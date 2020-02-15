@@ -146,16 +146,21 @@ and `value` to the session data for this session.
 session.
 
 
-## include and compile
+## include, compile, and module
 
 `await include(filename)` includes the NJSP file named by `filename`, searched
 in the directory of the current file. Note that you can include normal
-JavaScript files with `require` instead; this is only for NJSP files.
+JavaScript files with `require` instead; this is only for NJSP files. This
+behaves like `require`, insofar as it returns (a Promise which resolves to) an
+object, set by `module.exports` in the NJSP file referenced.
 
 `compile(filename)` parses and compiles `filename` into an asynchronous
 function in the same way as `include`, but does not run it. Note, however, that
 these functions take a map of all these globals as an argument, so the plain
 function is probably largely useless.
+
+`module.exports` will be exported to whoever includes this NJSP page, as with
+`require`. Otherwise, `module` is nothing like Node's `module`.
 
 
 # Technical details
