@@ -213,7 +213,7 @@ function run(db, params, req, res) {
     }
 
     // Create a session
-    var session = new session.Session(db, req, res);
+    var s = new session.Session(db, req, res);
 
     // Cry a lot if we time out
     var timeout = setTimeout(() => {
@@ -228,7 +228,7 @@ function run(db, params, req, res) {
         params,
         writeHead: res.writeHead.bind(res),
         write: res.write.bind(res),
-        session,
+        session: s,
         compileAbsolute: compile,
         require,
         exports: {}
@@ -240,12 +240,12 @@ function run(db, params, req, res) {
     // Run it
     func(module).then(() => {
         clearTimeout(timeout);
-        session.close(); // Just let it finish in the background
+        s.close(); // Just let it finish in the background
         res.end();
     }).catch((ex) => {
         clearTimeout(timeout);
         res.write(ex.stack + "");
-        session.close();
+        s.close();
         res.end();
     });
 }
