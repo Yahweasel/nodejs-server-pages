@@ -31,7 +31,7 @@ looked at) in the design of NJSP.
 This repository can be used directly (run njsp.js), or used as a module. Use
 the `createServer` method when using NJSP as a module:
 
-    const njsp = require("njsp");
+    const njsp = require("nodejs-server-pages");
     njsp.createServer({port: 3000, ip: "127.0.0.1"});
 
 The configuration parameter to `createServer` takes three options: `port`, `ip`
@@ -39,7 +39,11 @@ and `db`. NJSP presents a FastCGI server on the given IP and port, or, if
 `port` is a string, at the given Unix domain socket. The default is the Unix
 socket `/tmp/nodejs-server-pages.sock`. The `db` option is the path to an
 SQLite3 database, which NJSP will create if it doesn't exist, in which to store
-session data. The default is `nodejs-server-pages.db`.
+session data. The default is `nodejs-server-pages.db`. To use all default
+arguments, it's sufficient to pass no config argument at all, so the simplest
+NJSP client requires nothing more than:
+
+    require("nodejs-server-pages").createServer()
 
 NJSP is a standard FastCGI server, so then you must configure your web server
 to use it. In NGINX, for example:
