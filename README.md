@@ -175,3 +175,58 @@ When the `async function`'s promise resolves, the response is closed, and more
 requests are allowed. Technically, there's nothing to stop the page from having
 events left over, and these may interfere with future pages. It's best simply
 to avoid this.
+
+
+# Why NodeJS-Server-Pages?
+
+## Why NodeJS-Server-Pages instead of (other JS solution) x?
+
+To be honest, I haven't found `x`. I'm surprised not to find many alternatives
+for this PHP-style templating. Perhaps because of the problem with asynchrony;
+we needed Node to support `async function`s before this would've been useful.
+If you know of one, please tell me; I don't want to step on any feet!
+
+The only alternative I'm aware of is CGI-Node, but that's a non-starter for a
+number of reasons. As the name suggests, it's CGI, so it spins up a new Node
+process for every page view. For a language like Perl, which was the common use
+case of CGI back in the day, this startup time is negligible. But for Node,
+startup time can be significant. Further, that's chewing through a lot of
+memory, and making zero use of the JIT.
+
+Worse yet, CGI-Node has no real support for asynchrony, which is, at best,
+troublesome for Node.JS.
+
+In terms of JS solutions that allow you to build web pages but not with
+PHP-style embedded-code templates... well, it's a matter of taste. I don't like
+PHP very much, but I think that style was an extremely good choice. It's a very
+elegant way of expressing code in the context of filling in a web page. There
+are many tasks for which that makes no sense, but there are also many tasks for
+which it makes perfect sense, and NJSP is designed for those.
+
+
+## Why NodeJS-Server-Pages instead of PHP?
+
+https://eev.ee/blog/2012/04/09/php-a-fractal-of-bad-design/
+
+
+# Limitations and future
+
+I made NJSP because I needed it. It's probably not going to change very much,
+simply because there aren't a lot of moving parts, and so not a lot that would
+need to change. All the heavy lifting is done by Node.JS itself.
+
+The most pressing limitation right now is that I haven't implemented HTTP POST
+at all yet. I have no reason not to have done so, I just haven't gotten around
+to it. It will certainly be done if I continue using NJSP.
+
+NJSP's server model presents a bottleneck, as all data has to pass through the
+main thread on its way to or back from one of the worker threads. That being
+said, that's the lightest load, and this model is perfectly common. If that's a
+major bottleneck, probably you would need to have created more redundancy at an
+earlier stage, e.g. the web server itself, beforehand.
+
+NJSP's cache makes the *second* load of any page fast, but the *first* load is
+still pretty slow. It would be nice to persist the cache in some way, so that
+new worker threads and new runs of NJSP would know what pages to cache.
+However, if the cache was persistent, cache invalidation would be absolutely
+mandatory, and who wants to bother with that?
