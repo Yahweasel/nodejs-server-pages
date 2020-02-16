@@ -129,9 +129,13 @@ functions are asynchronous, and so must be `await`ed, or otherwise have their
 promise handled. Asynchronous functions will be written with `await` here to
 make that clear.
 
-`await session.init()` initializes the session state for this session. Note
-that this *must* be called *before* writing the header; unlike PHP, sessions
-are not created automatically.
+`await session.init(config)` initializes the session state for this session.
+Note that this *must* be called *before* writing the header; unlike PHP,
+sessions are not created automatically. The optional `config` parameter is an
+object with configuration options. `config.expiry` sets the maximum age of
+session variables for this session, in seconds, defaulting to 6 months.
+`config.path` sets the path over which this session's cookie should apply,
+defaulting to /.
 
 `await session.get(key)` gets the value stored in the name `key` for this
 session. Returns `null` if there is no such key-value pair.

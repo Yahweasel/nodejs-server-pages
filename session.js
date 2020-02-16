@@ -46,14 +46,16 @@ function Session(db, request, response) {
 /**
  * Initialize a session. Must be called before headers are sent out.
  */
-Session.prototype.init = async function(path) {
+Session.prototype.init = async function(config) {
     if (this.inited)
         return;
     var sid = null;
     this.inited = true;
 
-    if (typeof path === "undefined")
-        path = "/";
+    if (typeof config === "undefined")
+        config = {};
+
+    this.expiry = config.expiry = (config.expiry || 60*60*24*30*6);
 
     // Make sure the database is real
     await this.run("PRAGMA journal_mode=WAL;");
@@ -86,7 +88,7 @@ Session.prototype.init = async function(path) {
                 await this.run("BEGIN TRANSACTION;");
                 row = await this.dbGet("SELECT * FROM session WHERE sid=@SID;", {"@SID": sid});
                 if (!row) {
-                    await this.run("INSERT INTO session VALUES (@SID, @KEY, @VALUE, date('now+6 months'));", {
+                    await this.run("INSERT INTO session VALUES (@SID, @KEY, @VALUE, datetime('now','" + config.expiry + " seconds'));", {
                         "@SID": sid,
                         "@KEY": "njspsessid",
                         "@VALUE": JSON.stringify(sid)
@@ -104,7 +106,9 @@ Session.prototype.init = async function(path) {
     }
 
     // Put the session ID in a cookie
-    var cook = cookie.serialize("NJSPSESSID", sid, {maxAge: 60*60*24*30*6, path});
+    var cook = cookie.serialize("NJSPSESSID", sid, {
+        maxAge: config.expiry,
+        path: {config.path || path});
     this.response.setHeader("set-cookie", cook);
 
     this.sid = sid;
@@ -140,7 +144,7 @@ Session.prototype.set = async function(key, value) {
                 "@SID": this.sid,
                 "@KEY": key
             });
-            await this.run("INSERT INTO session VALUES (@SID, @KEY, @VALUE, date('now+6 months'));", {
+            await this.run("INSERT INTO session VALUES (@SID, @KEY, @VALUE, datetime('now','" + this.expiry + " seconds'));", {
                 "@SID": this.sid,
                 "@KEY": key,
                 "@VALUE": JSON.stringify(value)
@@ -161,7 +165,7 @@ Session.prototype.delete = async function(key) {
 }
 
 Session.prototype.cleanup = async function() {
-    await this.run("DELETE FROM session WHERE expires<=date('now');");
+    await this.run("DELETE FROM session WHERE expires<=datetime('now');");
 }
 
 Session.prototype.close = async function() {
