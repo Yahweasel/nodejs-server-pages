@@ -163,25 +163,6 @@ function is probably largely useless.
 `require`. Otherwise, `module` is nothing like Node's `module`.
 
 
-# Technical details
-
-NJSP operates a threadpool (really, a process pool) of Node.JS processes which
-handle individual requests. When a request is made, one of these processes is
-chosen, and it runs the requested page.
-
-The page is compiled into an `async function`, simply by replacing the text
-components with calls to `write`, and this is compiled using `AsyncFunction`.
-
-The handler processes cache pages they've been requested to load, so that
-reused pages are handled extremely quickly, requiring no further parsing or
-compilation, and benefiting from JIT.
-
-When the `async function`'s promise resolves, the response is closed, and more
-requests are allowed. Technically, there's nothing to stop the page from having
-events left over, and these may interfere with future pages. It's best simply
-to avoid this.
-
-
 # Why NodeJS-Server-Pages?
 
 ## Why NodeJS-Server-Pages instead of (other JS solution) x?
@@ -213,7 +194,15 @@ templating (and might do so in the future), but that's not the interesting part
 to me. I'm also dissatisfied with how EJS handles the variables of the compiled
 functions. `with` is never the right option, and since they're compiling
 anyway, there's no compelling reason not to compile them in as plain ol'
-`var`s. Ultimately, the part of NJSP that EJS solves is actually pretty small.
+`var`s.
+
+Also, EJS compiles to functions which *return* strings, rather than sending
+strings via some response, which is exactly not what PHP or NJSP does. NJSP
+allows you to send partial output, then do some processing, then send the rest.
+Whether this is useful is debatable, but it is a major difference.
+
+Ultimately, the part of NJSP that EJS solves is actually pretty small, and NSJP
+solves it in a way that's better suited for its use case.
 
 
 ### Express, etc
@@ -252,3 +241,45 @@ still pretty slow. It would be nice to persist the cache in some way, so that
 new worker threads and new runs of NJSP would know what pages to cache.
 However, if the cache was persistent, cache invalidation would be absolutely
 mandatory, and who wants to bother with that?
+
+
+# Technical details
+
+NJSP operates a threadpool (really, a process pool) of Node.JS processes which
+handle individual requests. When a request is made, one of these processes is
+chosen, and it runs the requested page.
+
+The page is compiled into an `async function`, simply by replacing the text
+components with calls to `write`, and this is compiled using `AsyncFunction`.
+
+The handler processes cache pages they've been requested to load, so that
+reused pages are handled extremely quickly, requiring no further parsing or
+compilation, and benefiting from JIT.
+
+When the `async function`'s promise resolves, the response is closed, and more
+requests are allowed. Technically, there's nothing to stop the page from having
+events left over, and these may interfere with future pages. It's best simply
+to avoid this.
+
+To be quite precise, the example from the beginning of this README resolves to
+this code:
+
+    var request = module.request;
+    var response = module.response;
+    var params = module.params;
+    var writeHead = module.writeHead;
+    var write = module.write;
+    var session = module.session;
+    var compileAbsolute = module.compileAbsolute;
+    var require = module.require;
+    function compile(name) {
+    name = (name[0]==='/') ? name : ("/var/www/html/"+name);
+    return module.compileAbsolute(name);
+    }
+    async function include(name) {
+    var sm = {request,response,params,writeHead,write,session,compileAbsolute,require,exports:{}};
+    await (compile(name)(sm));
+    return sm.exports;
+    }
+    write("<html>\n    <body>\n        The current time is ");
+    write(new Date().toDateString()); write(".\n    </body>\n</html>\n");
