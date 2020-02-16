@@ -46,11 +46,14 @@ function Session(db, request, response) {
 /**
  * Initialize a session. Must be called before headers are sent out.
  */
-Session.prototype.init = async function() {
+Session.prototype.init = async function(path) {
     if (this.inited)
         return;
     var sid = null;
     this.inited = true;
+
+    if (typeof path === "undefined")
+        path = "/";
 
     // Make sure the database is real
     await this.run("PRAGMA journal_mode=WAL;");
@@ -101,7 +104,7 @@ Session.prototype.init = async function() {
     }
 
     // Put the session ID in a cookie
-    var cook = cookie.serialize("NJSPSESSID", sid, {maxAge: 60*60*24*30*6});
+    var cook = cookie.serialize("NJSPSESSID", sid, {maxAge: 60*60*24*30*6, path});
     this.response.setHeader("set-cookie", cook);
 
     this.sid = sid;
