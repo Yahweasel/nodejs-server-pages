@@ -108,7 +108,8 @@ Session.prototype.init = async function(config) {
     // Put the session ID in a cookie
     var cook = cookie.serialize("NJSPSESSID", sid, {
         maxAge: config.expiry,
-        path: (config.path || path));
+        path: (config.path || path)
+    });
     this.response.setHeader("set-cookie", cook);
 
     this.sid = sid;
