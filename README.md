@@ -186,20 +186,37 @@ to avoid this.
 
 ## Why NodeJS-Server-Pages instead of (other JS solution) x?
 
-To be honest, I haven't found `x`. I'm surprised not to find many alternatives
-for this PHP-style templating. Perhaps because of the problem with asynchrony;
-we needed Node to support `async function`s before this would've been useful.
-If you know of one, please tell me; I don't want to step on any feet!
+To be honest, I haven't found a satisfying `x`. I'm surprised not to find many
+alternatives for this PHP-style templating. Perhaps because of the problem with
+asynchrony; we needed Node to support `async function`s before this would've
+been useful.  If you know of one, please tell me; I don't want to step on any
+feet!
 
-The only alternative I'm aware of is CGI-Node, but that's a non-starter for a
-number of reasons. As the name suggests, it's CGI, so it spins up a new Node
-process for every page view. For a language like Perl, which was the common use
-case of CGI back in the day, this startup time is negligible. But for Node,
-startup time can be significant. Further, that's chewing through a lot of
-memory, and making zero use of the JIT.
+### CGI-Node
+
+CGI-Node is a non-starter for a number of reasons. As the name suggests, it's
+CGI, so it spins up a new Node process for every page view. For a language like
+Perl, which was the common use case of CGI back in the day, this startup time
+is negligible. But for Node, startup time can be significant. Further, that's
+chewing through a lot of memory, and making zero use of the JIT.
 
 Worse yet, CGI-Node has no real support for asynchrony, which is, at best,
 troublesome for Node.JS.
+
+### EJS
+
+( https://ejs.co )
+
+EJS is half the solution: It does the templating, but isn't easily built into
+an existing web-server infrastructure. I could've made NJSP use EJS for its
+templating (and might do so in the future), but that's not the interesting part
+to me. I'm also dissatisfied with how EJS handles the variables of the compiled
+functions. `with` is never the right option, and since they're compiling
+anyway, there's no compelling reason not to compile them in as plain ol'
+`var`s. Ultimately, the part of NJSP that EJS solves is actually pretty small.
+
+
+### Express, etc
 
 In terms of JS solutions that allow you to build web pages but not with
 PHP-style embedded-code templates... well, it's a matter of taste. I don't like
