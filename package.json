@@ -1,6 +1,6 @@
 {
   "name": "nodejs-server-pages",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "FastCGI server for using Node.JS in server-side templated pages, in the style of PHP.",
   "main": "njsp.js",
   "scripts": {

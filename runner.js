@@ -349,6 +349,20 @@ Response.prototype.write = function(data) {
     if (!this.sentHeaders)
         this.writeHead(200);
 
+    // Convert to a sendable type
+    if (typeof data === "object") {
+        if (!(data instanceof Buffer)) {
+            try {
+                data = JSON.stringify(data);
+            } catch (ex) {
+                data = data + "";
+            }
+        }
+    } else {
+        data = data+"";
+    }
+
+    // Use the compressor if needed
     if (this.compression) {
         if (!this.compressor) {
             switch (this.compression) {
