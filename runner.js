@@ -39,6 +39,15 @@ const globals = [
 ];
 
 /**
+ * When a page is done, we need to eliminate all cached requires that aren't
+ * part of the runner itself. As such, we remember the cache here, so we know
+ * what not to delete.
+ */
+const requireCacheCleanState = {};
+for (var m in require.cache)
+    requireCacheCleanState[m] = true;
+
+/**
  * "Parse" a JSS file into JavaScript code
  * @param {string} file     The file content
  */
@@ -240,14 +249,24 @@ function run(db, params, req, res) {
     // Run it
     func(module).then(() => {
         clearTimeout(timeout);
-        s.close(); // Just let it finish in the background
-        res.end();
+        finish();
     }).catch((ex) => {
         clearTimeout(timeout);
         res.write(ex.stack + "");
-        s.close();
-        res.end();
+        finish();
     });
+
+    // Close when we're done
+    function finish() {
+        s.close(); // No await, just let it finish in the background
+        res.end();
+
+        // So that future requires don't cache our stuff, delete the whole cache
+        for (var m in require.cache) {
+            if (/\.js(on)?$/.test(m) && !requireCacheCleanState[m])
+                delete require.cache[m];
+        }
+    }
 }
 
 /**
