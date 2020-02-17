@@ -18,6 +18,7 @@ const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 const fs = require("fs");
 const path = require("path");
 const querystring = require("querystring");
+const zlib = require("zlib");
 
 const session = require("./session.js");
 
@@ -254,6 +255,9 @@ function run(db, params, req, res) {
     // Parse its query string
     req.query = querystring.parse(req.query);
 
+    // Enable compression by default
+    res.compress(req);
+
     // Run it
     func(module).then(() => {
         clearTimeout(timeout);
@@ -286,6 +290,40 @@ function Response() {
     this.headers = {"content-type": "text/html"};
     this.sentHeaders = false;
     this.ended = false;
+    this.compression = null;
+    this.compressor = null;
+}
+
+// Enable compression
+Response.prototype.compress = function(req) {
+    if (!req) {
+        this.compression = null;
+        this.setHeader("content-encoding", "identity");
+        return;
+    }
+
+    // Check for supported compression
+    var supported = {};
+    req.headers["accept-encoding"].split(",").forEach((enc) => {
+        supported[enc.trim()] = true;
+    });
+
+    if (supported.br && zlib.createBrotliCompress) {
+        // Brotli
+        this.compression = "br";
+    } else if (supported.gzip && zlib.createGzip) {
+        this.compression = "gzip";
+    } else {
+        this.compression = null;
+    }
+
+    if (this.compression)
+        this.setHeader("content-encoding", this.compression);
+    else
+        this.setHeader("content-encoding", "identity");
+
+    /* We don't initialize the compressor until we've actually started writing
+     * data, in case they change their mind */
 }
 
 Response.prototype.writeHead = function(code, headers) {
@@ -310,7 +348,34 @@ Response.prototype.write = function(data) {
         return;
     if (!this.sentHeaders)
         this.writeHead(200);
-    process.send({c: "w", d: data});
+
+    if (this.compression) {
+        if (!this.compressor) {
+            switch (this.compression) {
+                case "br": // Brotli
+                    this.compressor = zlib.createBrotliCompress();
+                    break;
+
+                case "gzip":
+                    this.compressor = zlib.createGzip();
+                    break;
+            }
+
+            this.compressor.on("data", (chunk) => {
+                process.send({c: "w", x: chunk.toString("binary")});
+            });
+
+            this.compressor.on("end", () => {
+                process.send({c: "e"});
+            });
+        }
+
+        this.compressor.write(data);
+
+    } else {
+        process.send({c: "w", d: data});
+
+    }
 }
 
 Response.prototype.end = function() {
@@ -318,7 +383,10 @@ Response.prototype.end = function() {
         return;
     if (!this.sentHeaders)
         this.writeHead(200);
-    process.send({c: "e"});
+    if (this.compressor)
+        this.compressor.end();
+    else
+        process.send({c: "e"});
     this.ended = true;
 }
 

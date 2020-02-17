@@ -122,6 +122,12 @@ circumstances. This function is aliased as `writeHead` for brevity.
 circumstances, but could be used to allow the server to continue doing some
 processing even after the page is complete.
 
+`response.compress(request)` will enable compression (gzip or brotli) based on
+what the request supports. To *disable* compression, which may be necessary if
+you need data to flush to the client immediately, use
+`response.compress(null)`. This must be done before `writeHead`, and is done
+automatically (compression is on by default).
+
 
 ## params
 

@@ -113,7 +113,10 @@ function spawnThread() {
                     c.res.writeHead(msg.x, msg.h);
                     break;
                 case "w":
-                    c.res.write(msg.d);
+                    if (msg.d)
+                        c.res.write(msg.d);
+                    else
+                        c.res.write(Buffer.from(msg.x, "binary"));
                     break;
                 case "e":
                     c.res.end();
