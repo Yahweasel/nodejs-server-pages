@@ -19,6 +19,14 @@ So-called "echo tags" are also supported, e.g.:
         </body>
     </html>
 
+In addition, a "no-direct" tag is supported, for pages which must be included
+from other pages (e.g. headers and footers):
+
+    <?JS! /* this must be included from elsewhere! */ ?>
+    <div id="header">
+        Header!
+    </div>
+
 You can also abbreviate `<?JS` as `<?`, as in PHP.
 
 Various concepts in NJSP are inspired by CGI-Node, but NJSP's design makes for
@@ -152,11 +160,13 @@ session.
 
 ## include, compile, and module
 
-`await include(filename)` includes the NJSP file named by `filename`, searched
-in the directory of the current file. Note that you can include normal
+`await include(filename, [args])` includes the NJSP file named by `filename`,
+searched in the directory of the current file. Note that you can include normal
 JavaScript files with `require` instead; this is only for NJSP files. This
 behaves like `require`, insofar as it returns (a Promise which resolves to) an
-object, set by `module.exports` in the NJSP file referenced.
+object, set by `module.exports` in the NJSP file referenced. Optional further
+arguments may be provided to `include`, and if provided, will be available in
+the included code in `arguments[1]` and further.
 
 `compile(filename)` parses and compiles `filename` into an asynchronous
 function in the same way as `include`, but does not run it. Note, however, that

@@ -93,10 +93,12 @@ function parseJS(file, i, out) {
     var isEchoTag = false;
 
     // First, we can start with "JS<whitespace>" or an echo tag
-    var optStart = /^(js)?(=)?\s/i;
+    var optStart = /^(js)?(=)?(!)?\s/i;
     var ose = optStart.exec(file.slice(i));
     if (ose) {
         i += ose[0].length;
+        if (ose[3] === "!")
+            out.o += "if (!module.included) { module.writeHead(500); return; }\n";
         if (ose[2] === "=") {
             out.o += "write(String(";
             isEchoTag = true;
@@ -187,8 +189,9 @@ function compile(fname) {
             "return module.compileAbsolute(name);\n" +
             "}\n" +
             "async function include(name) {\n" +
-            "var sm = {" + globals.join(",") + ",exports:{}};\n" +
-            "await (compile(name)(sm));\n" +
+            "var sm = {" + globals.join(",") + ",included:true,exports:{}};\n" +
+            "var a = [sm].concat(Array.prototype.slice.call(arguments, 1));\n" +
+            "await (compile(name).apply(null, a));\n" +
             "return sm.exports;\n" +
             "}\n";
 
