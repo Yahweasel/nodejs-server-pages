@@ -304,7 +304,7 @@ Response.prototype.compress = function(req) {
 
     // Check for supported compression
     var supported = {};
-    req.headers["accept-encoding"].split(",").forEach((enc) => {
+    (req.headers["accept-encoding"]||"").split(",").forEach((enc) => {
         supported[enc.trim()] = true;
     });
 
