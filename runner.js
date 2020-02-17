@@ -74,7 +74,7 @@ function parse(file) {
             }
         } else {
             // Just looking for -->
-            if (file.slice(i, 3) === "-->")
+            if (file.slice(i, i+3) === "-->")
                 inComment = false;
         }
     }
