@@ -20,6 +20,7 @@
 
 const cp = require("child_process");
 const fs = require("fs");
+const path = require("path");
 
 const fcgi = require("node-fastcgi");
 
@@ -28,6 +29,22 @@ const defaultConfig = {
     "ip": void 0,
     "db": "nodejs-server-pages.db"
 };
+
+// Create a NODE_PATH variable so that the runner can use the *main* modules
+const childNodePath = (function() {
+    var nodePath = ((process.env.NODE_PATH + ":") || "");
+    nodePath += require.main.paths.join(":");
+    return nodePath;
+})();
+
+// Add that to the environment
+const childEnv = (function() {
+    var env = {};
+    for (var v in process.env)
+        env[v] = process.env[v];
+    env.NODE_PATH = childNodePath;
+    return env;
+})();
 
 /**
  * Threads ready to run server requests
@@ -84,7 +101,7 @@ function createServer(config) {
  * @internal
  */
 function spawnThread() {
-    var c = cp.fork(__dirname + "/runner.js");
+    var c = cp.fork(__dirname + "/runner.js", {env: childEnv});
     c.res = null;
 
     c.on("message", (msg) => {
