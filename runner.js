@@ -247,7 +247,7 @@ function run(db, params, req, res) {
         write: res.write.bind(res),
         session: s,
         compileAbsolute: compile,
-        require,
+        require: require.main.require,
         exports: {}
     };
 
