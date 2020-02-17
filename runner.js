@@ -161,10 +161,7 @@ function compile(fname) {
     try {
         sbuf = fs.statSync(fname);
     } catch (ex) {
-        res.writeHead(500, {"Content-type": "text/plain"});
-        res.write("500: " + ex.stack);
-        res.end();
-        return;
+        return null;
     }
 
     // Check
@@ -220,6 +217,14 @@ function run(db, params, req, res) {
     } catch (ex) {
         res.writeHead(500, {"Content-type": "text/plain"});
         res.write("500: " + ex.stack);
+        res.end();
+        return;
+    }
+
+    if (func === null) {
+        // Not found!
+        res.writeHead(404);
+        res.write("404: File not found");
         res.end();
         return;
     }
