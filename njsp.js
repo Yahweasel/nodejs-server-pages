@@ -72,26 +72,47 @@ function createServer(config) {
 
     // Then create the server
     return fcgi.createServer((req, res) => {
-        // Send this request to a runner thread
-        if (readyThreads.length === 0)
-            spawnThread();
-        var thr = readyThreads.shift();
+        function go(body) {
+            // Send this request to a runner thread
+            if (readyThreads.length === 0)
+                spawnThread();
+            var thr = readyThreads.shift();
 
-        thr.res = res;
-        thr.send({
-            c: "r",
-            r: {
-                url: req.url,
-                headers: req.headers,
-                query: req.socket.params.QUERY_STRING
-            },
-            p: req.socket.params,
-            d: config.db
-        });
+            thr.res = res;
+            thr.send({
+                c: "r",
+                r: {
+                    url: req.url,
+                    headers: req.headers,
+                    query: req.socket.params.QUERY_STRING
+                },
+                p: req.socket.params,
+                b: body,
+                d: config.db
+            });
 
-        // If we don't have any spare threads for future requests, expand
-        if (readyThreads.length === 0)
-            spawnThread();
+            // If we don't have any spare threads for future requests, expand
+            if (readyThreads.length === 0)
+                spawnThread();
+        }
+
+        if (req.method === "GET") {
+            go();
+
+        } else if (req.method === "POST") {
+            var body = new Buffer(0);
+            req.on("data", (chunk) => {
+                body = Buffer.concat([body, chunk]);
+            });
+            req.on("end", () => {
+                go(body.toString("binary"));
+            });
+
+        } else {
+            res.writeHead(501);
+            res.end();
+
+        }
 
     }).listen(config.port, config.ip);
 }

@@ -208,7 +208,7 @@ function compile(fname) {
 /**
  * The main entry point. Run the given params.
  */
-function run(db, params, req, res) {
+function run(db, params, req, body, res) {
     var fname = params.DOCUMENT_ROOT + params.SCRIPT_NAME;
     var func;
 
@@ -233,12 +233,6 @@ function run(db, params, req, res) {
     // Create a session
     var s = new session.Session(db, req, res);
 
-    // Cry a lot if we time out
-    var timeout = setTimeout(() => {
-        // No safe way to kill this but to kill it
-        process.exit(0);
-    }, 30000);
-
     // Set up its module object
     var module = {
         request: req,
@@ -255,8 +249,38 @@ function run(db, params, req, res) {
     // Parse its query string
     req.query = querystring.parse(req.query);
 
+    // Handle the body
+    if (body) {
+        req.bodyRaw = body = Buffer.from(body, "binary");
+        var ct = (req.headers["content-type"]||"text/plain");
+
+        try {
+            switch (ct) {
+                case "application/json":
+                    req.body = JSON.parse(body.toString("utf8"));
+                    break;
+
+                case "application/x-www-form-urlencoded":
+                    req.body = querystring.parse(body.toString("utf8"));
+                    break;
+
+                case "text/plain":
+                    req.body = body.toString("utf8");
+                    break;
+            }
+        } catch (ex) {
+            req.bodyException = ex;
+        }
+    }
+
     // Enable compression by default
     res.compress(req);
+
+    // Cry a lot if we time out
+    var timeout = setTimeout(() => {
+        // No safe way to kill this but to kill it
+        process.exit(0);
+    }, 30000);
 
     // Run it
     func(module).then(() => {
@@ -410,7 +434,7 @@ process.on("message", (msg) => {
         case "r":
             // Run a command
             var res = new Response();
-            run(msg.d, msg.p, msg.r, res);
+            run(msg.d, msg.p, msg.r, msg.b, res);
             break;
     }
 });

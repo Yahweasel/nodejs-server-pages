@@ -98,6 +98,18 @@ NJSP exposes a number of variables and functions for use in web pages:
 
 `request.query` maps query variables to their values.
 
+`request.bodyRaw` is the *raw* (Buffer) body sent by the client on POST
+requests. You can use its presence to determine if a POST request was made,
+even if the body doesn't parse.
+
+`request.body` is the parsed client body, using whichever content-type the
+client specified. Currently supported are application/json,
+application/x-www-form-urlencoded, and text/plain.
+
+`request.bodyException` is the exception thrown while attempting to parse the
+body if it failed. Either this or `request.body` will be present if the type is
+supported.
+
 
 ## response
 
