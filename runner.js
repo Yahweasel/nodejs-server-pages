@@ -282,6 +282,14 @@ function run(db, params, req, body, res) {
         process.exit(0);
     }, 30000);
 
+    // Allow a different timeout (FIXME: inelegant)
+    res.setTimeLimit = function(tl) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            process.exit(0);
+        }, tl);
+    };
+
     // Run it
     func(module).then(() => {
         clearTimeout(timeout);

@@ -140,6 +140,10 @@ you need data to flush to the client immediately, use
 `response.compress(null)`. This must be done before `writeHead`, and is done
 automatically (compression is on by default).
 
+`response.setTimeLimit(limit)` sets the time limit, in milliseconds, starting
+from the point when the function is called. There is no function to disable the
+time limit entirely.
+
 
 ## params
 
