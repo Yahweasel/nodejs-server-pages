@@ -262,10 +262,6 @@ I made NJSP because I needed it. It's probably not going to change very much,
 simply because there aren't a lot of moving parts, and so not a lot that would
 need to change. All the heavy lifting is done by Node.JS itself.
 
-The most pressing limitation right now is that I haven't implemented HTTP POST
-at all yet. I have no reason not to have done so, I just haven't gotten around
-to it. It will certainly be done if I continue using NJSP.
-
 NJSP's server model presents a bottleneck, as all data has to pass through the
 main thread on its way to or back from one of the worker threads. That being
 said, that's the lightest load, and this model is perfectly common. If that's a
