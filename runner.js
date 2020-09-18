@@ -20,7 +20,11 @@ const path = require("path");
 const querystring = require("querystring");
 const zlib = require("zlib");
 
+const multipart = require("./multipart.js");
 const session = require("./session.js");
+
+const contentRE = /^([^ ;]*)/;
+const boundaryRE = /^multipart\/.+?(?:; boundary=(?:(?:"(.+)")|(?:([^\s]+))))$/i;
 
 /**
  * Timestamps for already-compiled files
@@ -253,6 +257,7 @@ function run(db, params, req, body, res) {
     if (body) {
         req.bodyRaw = body = Buffer.from(body, "binary");
         var ct = (req.headers["content-type"]||"text/plain");
+        ct = contentRE.exec(ct)[1];
 
         try {
             switch (ct) {
@@ -262,6 +267,24 @@ function run(db, params, req, body, res) {
 
                 case "application/x-www-form-urlencoded":
                     req.body = querystring.parse(body.toString("utf8"));
+                    break;
+
+                case "multipart/form-data":
+                    var boundary = boundaryRE.exec(req.headers["content-type"]);
+                    var parts = multipart.Parse(body.toString("utf8"), boundary[1] || boundary[2]);
+                    req.files = [];
+                    req.body = {};
+                    parts.forEach((part) => {
+                        if (part.filename) {
+                            req.files.push(part);
+                        } else if (part.name) {
+                            try {
+                                req.body[part.name] = part.data.toString("utf8");
+                            } catch (ex) {
+                                req.body[part.name] = part.data;
+                            }
+                        }
+                    });
                     break;
 
                 case "text/plain":

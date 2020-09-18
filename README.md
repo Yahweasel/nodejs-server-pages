@@ -104,11 +104,18 @@ even if the body doesn't parse.
 
 `request.body` is the parsed client body, using whichever content-type the
 client specified. Currently supported are application/json,
-application/x-www-form-urlencoded, and text/plain.
+application/x-www-form-urlencoded, multipart/form-data, and text/plain.
 
 `request.bodyException` is the exception thrown while attempting to parse the
 body if it failed. Either this or `request.body` will be present if the type is
 supported.
+
+`request.files` is, in the case of multipart/form-data, the array of file data
+uploaded. Each entry is an object with a filename, name, and data field, where
+the filename is the client-specified filename uploaded, the name is the
+form-specified name of the file field, and data is a Node buffer with the
+content of the file. If the content type is not multip-art/form-data, this
+field does not exist.
 
 
 ## response
