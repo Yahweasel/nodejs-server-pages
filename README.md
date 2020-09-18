@@ -114,8 +114,8 @@ supported.
 uploaded. Each entry is an object with a filename, name, and data field, where
 the filename is the client-specified filename uploaded, the name is the
 form-specified name of the file field, and data is a Node buffer with the
-content of the file. If the content type is not multip-art/form-data, this
-field does not exist.
+content of the file. If the content type is not multipart/form-data, this field
+does not exist.
 
 
 ## response
