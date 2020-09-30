@@ -77,6 +77,10 @@ Session.prototype.init = async function(config) {
         }
     }
 
+    // If we don't have a response to set a cookie, we can't make a new session
+    if (!this.response)
+        return;
+
     // Create a new session ID
     if (!sid) {
         while (true) {
@@ -119,6 +123,8 @@ Session.prototype.init = async function(config) {
 }
 
 Session.prototype.get = async function(key) {
+    if (!this.sid)
+        return false;
     var row = await this.dbGet("SELECT value FROM session WHERE sid=@SID AND key=@KEY;", {
         "@SID": this.sid,
         "@KEY": key
@@ -129,6 +135,8 @@ Session.prototype.get = async function(key) {
 }
 
 Session.prototype.getAll = async function() {
+    if (!this.sid)
+        return null;
     var rows = await up(this.db, "all")("SELECT * FROM session WHERE sid=@SID;", {"@SID": this.sid});
     var ret = {};
     rows.forEach((row) => {
@@ -138,6 +146,8 @@ Session.prototype.getAll = async function() {
 }
 
 Session.prototype.set = async function(key, value) {
+    if (!this.sid)
+        return;
     while (true) {
         try {
             await this.run("BEGIN TRANSACTION;");
@@ -159,6 +169,8 @@ Session.prototype.set = async function(key, value) {
 }
 
 Session.prototype.delete = async function(key) {
+    if (!this.sid)
+        return;
     await this.run("DELETE FROM session WHERE sid=@SID AND key=@KEY;", {
         "@SID": this.sid,
         "@KEY": key
@@ -166,6 +178,8 @@ Session.prototype.delete = async function(key) {
 }
 
 Session.prototype.cleanup = async function() {
+    if (!this.sid)
+        return;
     await this.run("DELETE FROM session WHERE expires<=datetime('now');");
 }
 

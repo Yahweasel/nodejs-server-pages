@@ -20,12 +20,20 @@
 
 const cp = require("child_process");
 const fs = require("fs");
+const http = require("http");
 const path = require("path");
 
 const fcgi = require("node-fastcgi");
+const ws = require("ws");
 
 const defaultConfig = {
     "port": "/tmp/nodejs-server-pages.sock",
+    "ip": void 0,
+    "db": "nodejs-server-pages.db"
+};
+
+const defaultWSConfig = {
+    "port": "/tmp/nodejs-server-pages-ws.sock",
     "ip": void 0,
     "db": "nodejs-server-pages.db"
 };
@@ -50,23 +58,22 @@ const childEnv = (function() {
  * Threads ready to run server requests
  */
 var readyThreads = [];
+var wsThreads = {};
 
+/**
+ * Create our FastCGI server
+ */
 function createServer(config) {
-    // Make sure we have a usable config
-    if (typeof config === "undefined")
-        config = {};
-    for (var k in defaultConfig) {
-        if (!(k in config))
-            config[k] = defaultConfig[k];
-    }
+    config = config || {};
 
     // We'll need at least one thread
     spawnThread();
 
     // If we're listening to a UNIX-domain socket, delete any old one
-    if (typeof config.port === "string") {
+    var port = config.port || defaultConfig.port;
+    if (typeof port === "string") {
         try {
-            fs.unlinkSync(config.port);
+            fs.unlinkSync(port);
         } catch (ex) {}
     }
 
@@ -88,7 +95,7 @@ function createServer(config) {
                 },
                 p: req.socket.params,
                 b: body,
-                d: config.db
+                d: config.db || defaultConfig.db
             });
 
             // If we don't have any spare threads for future requests, expand
@@ -114,7 +121,7 @@ function createServer(config) {
 
         }
 
-    }).listen(config.port, config.ip);
+    }).listen(port, config.ip || defaultConfig.ip);
 }
 
 /**
@@ -166,7 +173,98 @@ function spawnThread() {
     readyThreads.push(c);
 }
 
+/**
+ * Create our HTTP/ws server
+ */
+function createWSServer(config) {
+    config = config || {};
+
+    // If we're listening to a UNIX-domain socket, delete any old one
+    var port = config.port || defaultWSConfig.port;
+    if (typeof port === "string") {
+        try {
+            fs.unlinkSync(port);
+        } catch (ex) {}
+    }
+
+    // Create the server
+    const hs = http.createServer();
+
+    // Listen in the right place
+    hs.listen(port, config.ip || defaultWSConfig.ip);
+
+    // And listen for upgrade requests
+    hs.on("upgrade", (req, sock) => {
+        // Find the root
+        var host = "host:" + req.headers.host;
+        var root;
+        if (host in config.root)
+            root = config.root[host];
+        else
+            root = config.root["default"];
+
+        // Find the file
+        var fname = req.url.replace(/\?.*/, "");
+        try {
+            fname = decodeURIComponent(fname);
+        } catch (ex) {
+            return sock.destroy();
+        }
+        fname = root + path.normalize("/" + fname) + ".js";
+        console.error(fname);
+
+        // Get the stats
+        var sbuf = null;
+        try {
+            sbuf = fs.statSync(fname);
+        } catch (ex) {}
+
+        if (!sbuf) {
+            // Invalid file
+            return sock.destroy();
+        }
+
+        // Check
+        var wsThread = wsThreads[fname];
+        if (wsThread && wsThread.mtime < sbuf.mtimeMs) {
+            // Thread is out of date
+            wsThread.c.disconnect();
+            wsThread = null;
+        }
+
+        // Maybe make a new thread
+        if (!wsThread) {
+            wsThreads[fname] = wsThread = {
+                mtime: sbuf.mtimeMs,
+                c: cp.fork(__dirname + "/wsrunner.js", {env: childEnv, detached: true, stdio: "ignore"})
+            };
+            wsThread.c.on("exit", () => {
+                if (wsThreads[fname] === wsThread)
+                    delete wsThreads[fname];
+            });
+            wsThread.c.send({c: "l", f: fname});
+        }
+
+        // Run this socket
+        wsThread.c.send({
+            c: "r",
+            r: {
+                url: req.url,
+                method: req.method,
+                headers: req.headers
+            },
+            d: config.db || defaultWSConfig.db
+        }, sock);
+    });
+
+    hs.on("request", (req, res) => {
+        res.writeHead(426);
+        res.write("426: Upgrade Required");
+        res.end();
+    });
+}
+
 if (require.main === module)
     createServer();
 
-module.exports = {createServer};
+module.exports = {createServer, createWSServer};
