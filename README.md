@@ -206,6 +206,39 @@ function is probably largely useless.
 `require`. Otherwise, `module` is nothing like Node's `module`.
 
 
+# WebSockets
+
+In addition to standard, templated pages, NodeJS-Server-Pages has support for
+WebSocket "pages". The `createWSServer` function is used in place of
+`createServer`, and instead of creating a FastCGI server, an HTTP server is
+created which only supports WebSocket connections. Depending on the WebSocket
+URL accessed, it defers to scripts, not unlike .jss scripts in the normal
+server. This can be proxied from a standard web server to create a variety of
+WebSocket endpoints. New servers are started automatically when the host
+scripts change, so this is a practical way of hosting diverse WebSocket
+endpoints without having to restart the core server.
+
+In addition to the configuration parameters accepted by `createServer`,
+`createWSServer` requires a field `root`, which describes the root directory
+for scripts handled by this server. `root` must be an object with at least a
+`default` field, containing the path where WebSocket scripts are stored. It may
+additionally have fields in the form of `host:<HOSTNAME>`, in order to support
+different scripts for different hostnames. `port` defaults to
+`/tmp/nodejs-server-pages-ws.sock`.
+
+If the path `/foo/bar/baf` is accessed, then the file `foo/bar/baf.js` is run
+from the appropriate root. Each script is a JavaScript file which is used as
+the body of an `async function`. That function is called every time a new
+WebSocket connection is made. The variable `sock` refers to the particular
+WebSocket. `request`, `session`, and `module` are available, but no other
+NodeJS-Server-Pages variables. Sessions may be accessed and modified within a
+WebSocket connection, but new sessions may not be created; that is, the session
+must have originally been created by a standard NodeJS-Server-Pages page.
+
+A single instance of a script will handle multiple WebSocket connections. A new
+instance is only created when the script changes.
+
+
 # Why NodeJS-Server-Pages?
 
 ## Why NodeJS-Server-Pages instead of (other JS solution) x?
