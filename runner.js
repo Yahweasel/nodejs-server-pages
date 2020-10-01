@@ -442,7 +442,10 @@ Response.prototype.write = function(data) {
         this.compressor.write(data);
 
     } else {
-        process.send({c: "w", d: data});
+        if (typeof data === "string")
+            process.send({c: "w", d: data});
+        else
+            process.send({c: "w", x: data.toString("binary")});
 
     }
 }
