@@ -92,5 +92,10 @@ process.on("message", (msg, sock) => {
         case "r":
             run(msg.d, msg.r, sock);
             break;
+
+        case "t":
+            // Terminate
+            process.exit(0);
+            break;
     }
 });

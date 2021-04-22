@@ -470,5 +470,10 @@ process.on("message", (msg) => {
             var res = new Response();
             run(msg.d, msg.p, msg.r, msg.b, res);
             break;
+
+        case "t":
+            // Terminate
+            process.exit(0);
+            break;
     }
 });

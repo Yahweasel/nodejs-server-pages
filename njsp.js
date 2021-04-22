@@ -58,6 +58,15 @@ const childEnv = (function() {
  * Threads ready to run server requests
  */
 var readyThreads = [];
+
+/**
+ * Threads currently running server requests
+ */
+var busyThreads = 0;
+
+/**
+ * Threads handling ws requests
+ */
 var wsThreads = {};
 
 /**
@@ -84,6 +93,7 @@ function createServer(config) {
             if (readyThreads.length === 0)
                 spawnThread();
             var thr = readyThreads.shift();
+            busyThreads++;
 
             thr.res = res;
             thr.send({
@@ -150,6 +160,8 @@ function spawnThread() {
                     c.res.end();
                     c.res = null;
                     readyThreads.push(c);
+                    busyThreads--;
+                    unspawnThreads();
                     break;
             }
         } catch (ex) {
@@ -158,9 +170,11 @@ function spawnThread() {
     });
 
     c.on("exit", () => {
-        // Make sure we don't consider a dead thread to be ready
+        // Make sure we don't consider a dead thread to be ready or busy
         var i = readyThreads.indexOf(c);
-        if (i !== -1)
+        if (i === -1)
+            busyThreads--;
+        else
             readyThreads.splice(i, 1);
 
         // And end the response if needed
@@ -171,6 +185,45 @@ function spawnThread() {
     });
 
     readyThreads.push(c);
+}
+
+/**
+ * Unspawn if we have excess threads
+ * @internal
+ */
+function unspawnThreads() {
+    function vmSize(pid) {
+        try {
+            let status = fs.readFileSync(`/proc/${pid}/status`).split("\n");
+            for (let s of status) {
+                let parts = s.split(":");
+                if (parts[0] === "VmSize")
+                    return parseInt(parts[1]);
+            }
+        } catch (ex) {
+            return 0;
+        }
+    }
+
+    let bt = busyThreads;
+    while (readyThreads.length > bt + 2) {
+        // Choose the process with the greatest VM size
+        let maxIdx = 0;
+        let max = 0;
+        for (let i = 0; i < readyThreads.length; i++) {
+            let pid = readyThreads[i].pid;
+            let sz = vmSize(pid);
+            if (sz > max) {
+                maxIdx = i;
+                max = sz;
+            }
+        }
+
+        // Kill it
+        readyThreads[maxIdx].send({c: "t"});
+        readyThreads.splice(maxIdx, 1);
+        busyThreads++;
+    }
 }
 
 /**
