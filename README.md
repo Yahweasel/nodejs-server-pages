@@ -47,9 +47,13 @@ and `db`. NJSP presents a FastCGI server on the given IP and port, or, if
 `port` is a string, at the given Unix domain socket. The default is the Unix
 socket `/tmp/nodejs-server-pages.sock`. The `db` option is the path to an
 SQLite3 database, which NJSP will create if it doesn't exist, in which to store
-session data. The default is `nodejs-server-pages.db`. To use all default
-arguments, it's sufficient to pass no config argument at all, so the simplest
-NJSP client requires nothing more than:
+session data. The default is `nodejs-server-pages.db`. Finally, you may set an
+`errDB` argument, in which case errors will be written to the given database.
+If `errDB` isn't given, errors from FastCGI pages will be written to stderr,
+but errors from WebSocket pages will be lost!
+
+To use all default arguments, it's sufficient to pass no config argument at
+all, so the simplest NJSP client requires nothing more than:
 
     require("nodejs-server-pages").createServer()
 
@@ -81,9 +85,9 @@ careful to use `await` within your NJSP code at any points where the sending of
 the web page to the client needs to wait for some processing. You may find
 Node's `util.promisify` extremely helpful (essentially mandatory) for this.
 
-NJSP pages may use all the features of Node.JS, including `require`. Modules
-will be searched for in the NJSP installation directory, not the web server's
-document root.
+NJSP pages may use all the features of Node.JS, including `require` and
+`import`. Modules will be searched for in the NJSP installation directory, not
+the web server's document root.
 
 NJSP exposes a number of variables and functions for use in web pages:
 
@@ -187,7 +191,7 @@ and `value` to the session data for this session.
 session.
 
 
-## include, compile, and module
+## include, compile, module, dirname, filename
 
 `await include(filename, [args])` includes the NJSP file named by `filename`,
 searched in the directory of the current file. Note that you can include normal
@@ -204,6 +208,8 @@ function is probably largely useless.
 
 `module.exports` will be exported to whoever includes this NJSP page, as with
 `require`. Otherwise, `module` is nothing like Node's `module`.
+
+`__dirname` and `__filename` are available as in Node.
 
 
 # WebSockets
@@ -237,6 +243,15 @@ must have originally been created by a standard NodeJS-Server-Pages page.
 
 A single instance of a script will handle multiple WebSocket connections. A new
 instance is only created when the script changes.
+
+`module.ondisconnect` may be set to a function which will be run when such an
+upgrade happens and the current version is disconnected. Note that this is the
+*script* being disconnected, not the *client*; by default,
+`module.ondisconnect` is `null`, so existing instances will continue to serve
+clients that connected before the script was upgraded. If the WebSocket script
+is largely independent, this is probably what you want. A useful option is
+`module.ondisconnect = () => process.exit(0);`, which will effectively
+disconnect all clients that are connected to the old version of the script.
 
 
 # Why NodeJS-Server-Pages?
