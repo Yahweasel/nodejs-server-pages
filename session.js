@@ -49,7 +49,7 @@ function Session(db, request, response) {
 Session.prototype.init = async function(config) {
     if (this.inited)
         return;
-    var sid = null;
+    let sid = null;
     this.inited = true;
 
     if (typeof config === "undefined")
@@ -66,7 +66,7 @@ Session.prototype.init = async function(config) {
     // Try to get the existing session ID
     if ("cookie" in this.request.headers) {
         //  Check if our cookie is already there
-        var cookies = cookie.parse(this.request.headers.cookie);
+        const cookies = cookie.parse(this.request.headers.cookie);
         if ("NJSPSESSID" in cookies) {
             sid = cookies.NJSPSESSID;
 
@@ -84,7 +84,7 @@ Session.prototype.init = async function(config) {
     // Create a new session ID
     if (!sid) {
         while (true) {
-            var row = null;
+            let row = null;
             function part() { return (Math.random()).toString(36).slice(2); }
             sid = part() + part() + part();
 
@@ -110,7 +110,7 @@ Session.prototype.init = async function(config) {
     }
 
     // Put the session ID in a cookie
-    var cook = cookie.serialize("NJSPSESSID", sid, {
+    const cook = cookie.serialize("NJSPSESSID", sid, {
         maxAge: config.expiry,
         path: (config.path || "/")
     });
@@ -125,7 +125,7 @@ Session.prototype.init = async function(config) {
 Session.prototype.get = async function(key) {
     if (!this.sid)
         return false;
-    var row = await this.dbGet("SELECT value FROM session WHERE sid=@SID AND key=@KEY;", {
+    const row = await this.dbGet("SELECT value FROM session WHERE sid=@SID AND key=@KEY;", {
         "@SID": this.sid,
         "@KEY": key
     });
@@ -137,11 +137,11 @@ Session.prototype.get = async function(key) {
 Session.prototype.getAll = async function() {
     if (!this.sid)
         return null;
-    var rows = await up(this.db, "all")("SELECT * FROM session WHERE sid=@SID;", {"@SID": this.sid});
-    var ret = {};
-    rows.forEach((row) => {
+    const rows = await up(this.db, "all")("SELECT * FROM session WHERE sid=@SID;", {"@SID": this.sid});
+    const ret = {};
+    for (const row of rows) {
         ret[row.key] = JSON.parse(row.value);
-    });
+    }
     return ret;
 }
 

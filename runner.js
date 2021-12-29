@@ -49,7 +49,7 @@ const globals = [
  * what not to delete.
  */
 const requireCacheCleanState = {};
-for (var m in require.cache)
+for (const m in require.cache)
     requireCacheCleanState[m] = true;
 
 /**
@@ -57,17 +57,17 @@ for (var m in require.cache)
  * @param {string} file     The file content
  */
 function parse(file) {
-    var start = 0;
-    var out = {o: ""};
-    var inComment = false;
+    let start = 0;
+    const out = {o: ""};
+    let inComment = false;
 
     // Look for meaningful tags
-    for (var i = 0; i < file.length; i++) {
+    for (let i = 0; i < file.length; i++) {
         if (!inComment) {
             if (file.slice(i, i+4) === "<!--") {
                 inComment = true;
             } else if (file.slice(i, i+2) === "<?") {
-                var part = file.slice(start, i);
+                const part = file.slice(start, i);
                 if (part.trim() !== "") {
                     // Generate code to output this part
                     out.o += "write(" + JSON.stringify(part) + ");\n";
@@ -84,7 +84,7 @@ function parse(file) {
         }
     }
 
-    var part = file.slice(start);
+    const part = file.slice(start);
     if (part.trim() !== "")
         out.o += "write(" + JSON.stringify(part) + ");\n";
 
@@ -95,11 +95,11 @@ function parse(file) {
  * Parse just the JS part of a JSS file
  */
 function parseJS(file, i, out) {
-    var isEchoTag = false;
+    let isEchoTag = false;
 
     // First, we can start with "JS<whitespace>" or an echo tag
-    var optStart = /^(js)?(=)?(!)?\s/i;
-    var ose = optStart.exec(file.slice(i));
+    const optStart = /^(js)?(=)?(!)?\s/i;
+    const ose = optStart.exec(file.slice(i));
     if (ose) {
         i += ose[0].length;
         if (ose[3] === "!")
@@ -111,9 +111,9 @@ function parseJS(file, i, out) {
     }
 
     // This doesn't really parse, of course, just avoids ?> in comments
-    var start = i;
+    const start = i;
     for (; i < file.length; i++) {
-        var c = file[i];
+        const c = file[i];
         if (c === "/") {
             // Maybe a comment
             if (file[i+1] === "*") {
@@ -159,8 +159,8 @@ function parseJS(file, i, out) {
  * Compile the named file into an AsyncFunction
  */
 function compile(fname) {
-    var sbuf;
-    var func = null;
+    let sbuf;
+    let func = null;
 
     // Get the stats
     try {
@@ -177,13 +177,12 @@ function compile(fname) {
 
     // If we don't already have it, read it
     if (!func) {
-        var fcont, parsed;
+        let fcont, parsed;
 
         // A header is needed to make usable local variables and specialized functions
-        var header = "";
-        globals.forEach((global) => {
+        let header = "";
+        for (const global of globals)
             header += "var " + global + " = module." + global + ";\n";
-        });
 
         header +=
             "function compile(name) {\n" +
@@ -243,10 +242,10 @@ function run(db, params, req, body, res) {
     }
 
     // Create a session
-    var s = new session.Session(db, req, res);
+    const s = new session.Session(db, req, res);
 
     // Set up its module object
-    var module = {
+    const module = {
         request: req,
         response: res,
         params,
@@ -264,7 +263,7 @@ function run(db, params, req, body, res) {
     // Handle the body
     if (body) {
         req.bodyRaw = body = Buffer.from(body, "binary");
-        var ct = (req.headers["content-type"]||"text/plain");
+        let ct = (req.headers["content-type"]||"text/plain");
         ct = contentRE.exec(ct)[1];
 
         try {
@@ -278,11 +277,12 @@ function run(db, params, req, body, res) {
                     break;
 
                 case "multipart/form-data":
-                    var boundary = boundaryRE.exec(req.headers["content-type"]);
-                    var parts = multipart.Parse(body.toString("utf8"), boundary[1] || boundary[2]);
+                {
+                    const boundary = boundaryRE.exec(req.headers["content-type"]);
+                    const parts = multipart.Parse(body.toString("utf8"), boundary[1] || boundary[2]);
                     req.files = [];
                     req.body = {};
-                    parts.forEach((part) => {
+                    for (const part of parts) {
                         if (part.filename) {
                             req.files.push(part);
                         } else if (part.name) {
@@ -292,8 +292,9 @@ function run(db, params, req, body, res) {
                                 req.body[part.name] = part.data;
                             }
                         }
-                    });
+                    }
                     break;
+                }
 
                 case "text/plain":
                     req.body = body.toString("utf8");
@@ -308,7 +309,7 @@ function run(db, params, req, body, res) {
     res.compress(req);
 
     // Cry a lot if we time out
-    var timeout = setTimeout(() => {
+    let timeout = setTimeout(() => {
         // No safe way to kill this but to kill it
         process.exit(0);
     }, 30000);
@@ -343,7 +344,7 @@ function run(db, params, req, body, res) {
         res.end();
 
         // So that future requires don't cache our stuff, delete the whole cache
-        for (var m in require.cache) {
+        for (const m in require.cache) {
             if (/\.js(on)?$/.test(m) && !requireCacheCleanState[m])
                 delete require.cache[m];
         }
@@ -372,10 +373,9 @@ Response.prototype.compress = function(req) {
     }
 
     // Check for supported compression
-    var supported = {};
-    (req.headers["accept-encoding"]||"").split(",").forEach((enc) => {
+    const supported = {};
+    for (const enc of (req.headers["accept-encoding"]||"").split(","))
         supported[enc.trim()] = true;
-    });
 
     if (supported.br && zlib.createBrotliCompress) {
         // Brotli
@@ -401,7 +401,7 @@ Response.prototype.writeHead = function(code, headers) {
         return;
     }
     if (headers) {
-        for (var h in headers)
+        for (const h in headers)
             this.headers[h.toLowerCase()] = headers[h];
     }
     process.send({c: "h", x: code, h: this.headers});
@@ -481,8 +481,7 @@ process.on("message", (msg) => {
     switch (msg.c) {
         case "r":
             // Run a command
-            var res = new Response();
-            run(msg.d, msg.p, msg.r, msg.b, res);
+            run(msg.d, msg.p, msg.r, msg.b, new Response());
             break;
 
         case "t":

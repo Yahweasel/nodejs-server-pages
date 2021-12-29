@@ -32,12 +32,12 @@ const wss = new ws.Server({noServer: true});
 /**
  * Our compiled function
  */
-var func;
+let func;
 
 /**
  * Our child module
  */
-var cmodule;
+let cmodule;
 
 /**
  * Error database schema (FIXME: duplication).
@@ -80,10 +80,10 @@ function compile(fname, errDBF) {
     }
 
     // Make require accessible directly
-    var header = "var require = module.require;\n";
+    const header = "var require = module.require;\n";
 
     // Compile
-    var fcont = fs.readFileSync(fname, "utf8");
+    const fcont = fs.readFileSync(fname, "utf8");
     try {
         func = new AsyncFunction("request", "sock", "session", "module", header + fcont);
     } catch (ex) {
@@ -103,7 +103,7 @@ function compile(fname, errDBF) {
  */
 function run(db, req, sock) {
     // Create a session
-    var s = new session.Session(db, req, {setHeader: ()=>{}});
+    const s = new session.Session(db, req, {setHeader: ()=>{}});
 
     // Parse its query string
     req.query = querystring.parse(req.url.replace(/^[^\?]*(\?|$)/, ""));
