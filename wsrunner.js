@@ -103,8 +103,15 @@ function compile(fname, errDBF) {
     cmodule = {
         require: require.main.require,
         __dirname: path.dirname(realName),
-        __filename: realName
+        __filename: realName,
+        ondisconnect: null
     };
+
+    // Prepare for disconnection
+    process.on("disconnect", ev => {
+        if (cmodule.ondisconnect)
+            cmodule.ondisconnect(ev);
+    });
 }
 
 /**
