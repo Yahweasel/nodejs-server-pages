@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Copyright (c) 2020 Yahweasel
+ * Copyright (c) 2020, 2021 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -339,7 +339,7 @@ function createWSServer(config) {
                 if (wsThreads[fname] === wsThread)
                     delete wsThreads[fname];
             });
-            wsThread.c.send({c: "l", f: fname});
+            wsThread.c.send({c: "l", f: fname, x: config.errDB || null});
         }
 
         // Run this socket

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Yahweasel
+ * Copyright (c) 2020, 2021 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,7 +17,9 @@
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 const fs = require("fs");
 const path = require("path");
+
 const querystring = require("querystring");
+const sqlite3 = require("sqlite3");
 const ws = require("ws");
 
 const session = require("./session.js");
@@ -38,9 +40,45 @@ var func;
 var cmodule;
 
 /**
+ * Error database schema (FIXME: duplication).
+ */
+const errDBSQL = [
+    "PRAGMA journal_mode=WAL;",
+    `CREATE TABLE IF NOT EXISTS errors (time STRING, page STRING, file STRING,
+        error STRING);`,
+    "CREATE INDEX IF NOT EXISTS errors_time ON errors (time);"
+];
+
+/**
+ * Function to call when an error occurs.
+ */
+let error = null;
+
+/**
  * Compile the named file into an AsyncFunction
  */
-function compile(fname) {
+function compile(fname, errDBF) {
+    // Prepare for errors
+    if (errDBF) {
+        const errDB = new sqlite3.Database(errDBF);
+        const errP = (async function() {
+            for (const sql of errDBSQL)
+                await new Promise(res => errDB.run(sql, res));
+        })();
+
+        error = async function(err) {
+            await errP;
+            errDB.run(
+                `
+                INSERT INTO errors VALUES
+                    (datetime('now'), '', @FILE, @ERROR);
+                `, {
+                "@FILE": fname,
+                "@ERROR": err
+            });
+        };
+    }
+
     // Make require accessible directly
     var header = "var require = module.require;\n";
 
@@ -49,6 +87,8 @@ function compile(fname) {
     try {
         func = new AsyncFunction("request", "sock", "session", "module", header + fcont);
     } catch (ex) {
+        if (error)
+            error(ex + "\n" + ex.stack);
         func = async function(req, sock) { sock.close(); };
     }
 
@@ -71,7 +111,9 @@ function run(db, req, sock) {
     // Run it
     wss.handleUpgrade(req, sock, [], (ws) => {
         ws.on("close", finish);
-        func(req, ws, s, cmodule).catch(() => {
+        func(req, ws, s, cmodule).catch(ex => {
+            if (error)
+                error(ex + "\n" + ex.stack);
             ws.close();
         });
     });
@@ -86,7 +128,7 @@ function run(db, req, sock) {
 process.on("message", (msg, sock) => {
     switch (msg.c) {
         case "l":
-            compile(msg.f);
+            compile(msg.f, msg.x);
             break;
 
         case "r":
