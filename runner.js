@@ -40,7 +40,8 @@ const funcs = {};
  * The list of global(ish) values, which are passed through our async functions
  */
 const globals = [
-    "request", "response", "params", "writeHead", "write", "session", "compileAbsolute", "require"
+    "request", "response", "params", "writeHead", "write", "session",
+    "compileAbsolute", "require", "__dirname", "__filename"
 ];
 
 /**
@@ -214,6 +215,10 @@ function compile(fname) {
 function run(db, params, req, body, res) {
     const pname = `${params.REQUEST_SCHEME}://${params.SERVER_NAME}:${params.SERVER_PORT}${params.REQUEST_URI}`;
     const fname = params.DOCUMENT_ROOT + params.SCRIPT_NAME;
+    let realName = fname;
+    try {
+        realName = fs.realpathSync(fname);
+    } catch (ex) {}
     let func;
 
     // Compile the page
@@ -254,6 +259,8 @@ function run(db, params, req, body, res) {
         session: s,
         compileAbsolute: compile,
         require: require.main.require,
+        __dirname: path.dirname(realName),
+        __filename: realName,
         exports: {}
     };
 

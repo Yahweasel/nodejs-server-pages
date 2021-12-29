@@ -17,8 +17,8 @@
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 const fs = require("fs");
 const path = require("path");
-
 const querystring = require("querystring");
+
 const sqlite3 = require("sqlite3");
 const ws = require("ws");
 
@@ -58,6 +58,11 @@ let error = null;
  * Compile the named file into an AsyncFunction
  */
 function compile(fname, errDBF) {
+    let realName = fname;
+    try {
+        realName = fs.realpathSync(fname);
+    } catch (ex) {}
+
     // Prepare for errors
     if (errDBF) {
         const errDB = new sqlite3.Database(errDBF);
@@ -80,7 +85,9 @@ function compile(fname, errDBF) {
     }
 
     // Make require accessible directly
-    const header = "var require = module.require;\n";
+    let header = "";
+    for (const global of ["require", "__dirname", "__filename"])
+        header += "var " + global + " = module." + global + ";\n";
 
     // Compile
     const fcont = fs.readFileSync(fname, "utf8");
@@ -94,7 +101,9 @@ function compile(fname, errDBF) {
 
     // And make the "module"
     cmodule = {
-        require: require.main.require
+        require: require.main.require,
+        __dirname: path.dirname(realName),
+        __filename: realName
     };
 }
 
