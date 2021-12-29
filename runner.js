@@ -213,15 +213,23 @@ function compile(fname) {
  * The main entry point. Run the given params.
  */
 function run(db, params, req, body, res) {
-    var fname = params.DOCUMENT_ROOT + params.SCRIPT_NAME;
-    var func;
+    const pname = `${params.REQUEST_SCHEME}://${params.SERVER_NAME}:${params.SERVER_PORT}${params.REQUEST_URI}`;
+    const fname = params.DOCUMENT_ROOT + params.SCRIPT_NAME;
+    let func;
 
     // Compile the page
     try {
         func = compile(fname);
     } catch (ex) {
+        process.send({
+            c: "x",
+            p: pname,
+            f: fname,
+            e: ex + "\n" + ex.stack
+        });
+
         res.writeHead(500, {"Content-type": "text/plain"});
-        res.write("500: " + ex.stack);
+        res.write("500: Internal server error");
         res.end();
         return;
     }
@@ -319,7 +327,13 @@ function run(db, params, req, body, res) {
         finish();
     }).catch((ex) => {
         clearTimeout(timeout);
-        res.write(ex.stack + "");
+        process.send({
+            c: "x",
+            p: pname,
+            f: fname,
+            e: ex + "\n" + ex.stack
+        });
+        res.write("ERROR");
         finish();
     });
 

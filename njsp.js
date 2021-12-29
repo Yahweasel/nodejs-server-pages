@@ -22,8 +22,10 @@ const cp = require("child_process");
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
+const util = require("util");
 
 const fcgi = require("node-fastcgi");
+const sqlite3 = require("sqlite3");
 const ws = require("ws");
 
 const defaultConfig = {
@@ -37,6 +39,14 @@ const defaultWSConfig = {
     "ip": void 0,
     "db": "nodejs-server-pages.db"
 };
+
+// The SQL to set up our error database
+const errDBSQL = [
+    "PRAGMA journal_mode=WAL;",
+    `CREATE TABLE IF NOT EXISTS errors (time STRING, page STRING, file STRING,
+        error STRING);`,
+    "CREATE INDEX IF NOT EXISTS errors_time ON errors (time);"
+];
 
 // Create a NODE_PATH variable so that the runner can use the *main* modules
 const childNodePath = (function() {
@@ -75,8 +85,38 @@ let wsThreads = {};
 function createServer(config) {
     config = config || {};
 
+    // Prepare the DB
+    let error = null;
+    if (config.errDB) {
+        const errDB = new sqlite3.Database(config.errDB);
+        const errP = (async function() {
+            for (const sql of errDBSQL)
+                await new Promise(res => errDB.run(sql, res));
+        })();
+
+        error = async function(page, file, err) {
+            await errP;
+            errDB.run(
+                `
+                INSERT INTO errors VALUES
+                    (datetime('now'), @PAGE, @FILE, @ERROR);
+                `, {
+                "@PAGE": page,
+                "@FILE": file,
+                "@ERROR": err
+            });
+        };
+
+
+    } else {
+        error = function(page, file, err) {
+            console.error(`${file} (${page}):\n${err}\n`);
+        };
+
+    }
+
     // We'll need at least one thread
-    spawnThread();
+    spawnThread(error);
 
     // If we're listening to a UNIX-domain socket, delete any old one
     let port = config.port || defaultConfig.port;
@@ -91,7 +131,7 @@ function createServer(config) {
         function go(body) {
             // Send this request to a runner thread
             if (readyThreads.length === 0)
-                spawnThread();
+                spawnThread(error);
             const thr = readyThreads.shift();
             busyThreads++;
 
@@ -110,7 +150,7 @@ function createServer(config) {
 
             // If we don't have any spare threads for future requests, expand
             if (readyThreads.length === 0)
-                spawnThread();
+                spawnThread(error);
         }
 
         if (req.method === "GET") {
@@ -137,8 +177,9 @@ function createServer(config) {
 /**
  * Spawn a thread.
  * @internal
+ * @param error  Callback for when errors occur.
  */
-function spawnThread() {
+function spawnThread(error) {
     let c = cp.fork(__dirname + "/runner.js", {env: childEnv});
     c.res = null;
 
@@ -155,6 +196,10 @@ function spawnThread() {
                         c.res.write(msg.d);
                     else
                         c.res.write(Buffer.from(msg.x, "binary"));
+                    break;
+                case "x":
+                    if (error)
+                        error(msg.p, msg.f, msg.e);
                     break;
                 case "e":
                     c.res.end();
