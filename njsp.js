@@ -40,15 +40,15 @@ const defaultWSConfig = {
 
 // Create a NODE_PATH variable so that the runner can use the *main* modules
 const childNodePath = (function() {
-    var nodePath = ((process.env.NODE_PATH + ":") || "");
+    let nodePath = ((process.env.NODE_PATH + ":") || "");
     nodePath += require.main.paths.join(":");
     return nodePath;
 })();
 
 // Add that to the environment
 const childEnv = (function() {
-    var env = {};
-    for (var v in process.env)
+    let env = {};
+    for (const v in process.env)
         env[v] = process.env[v];
     env.NODE_PATH = childNodePath;
     return env;
@@ -57,17 +57,17 @@ const childEnv = (function() {
 /**
  * Threads ready to run server requests
  */
-var readyThreads = [];
+let readyThreads = [];
 
 /**
  * Threads currently running server requests
  */
-var busyThreads = 0;
+let busyThreads = 0;
 
 /**
  * Threads handling ws requests
  */
-var wsThreads = {};
+let wsThreads = {};
 
 /**
  * Create our FastCGI server
@@ -79,7 +79,7 @@ function createServer(config) {
     spawnThread();
 
     // If we're listening to a UNIX-domain socket, delete any old one
-    var port = config.port || defaultConfig.port;
+    let port = config.port || defaultConfig.port;
     if (typeof port === "string") {
         try {
             fs.unlinkSync(port);
@@ -92,7 +92,7 @@ function createServer(config) {
             // Send this request to a runner thread
             if (readyThreads.length === 0)
                 spawnThread();
-            var thr = readyThreads.shift();
+            const thr = readyThreads.shift();
             busyThreads++;
 
             thr.res = res;
@@ -117,7 +117,7 @@ function createServer(config) {
             go();
 
         } else if (req.method === "POST") {
-            var body = new Buffer(0);
+            let body = new Buffer(0);
             req.on("data", (chunk) => {
                 body = Buffer.concat([body, chunk]);
             });
@@ -139,7 +139,7 @@ function createServer(config) {
  * @internal
  */
 function spawnThread() {
-    var c = cp.fork(__dirname + "/runner.js", {env: childEnv});
+    let c = cp.fork(__dirname + "/runner.js", {env: childEnv});
     c.res = null;
 
     c.on("message", (msg) => {
@@ -171,7 +171,7 @@ function spawnThread() {
 
     c.on("exit", () => {
         // Make sure we don't consider a dead thread to be ready or busy
-        var i = readyThreads.indexOf(c);
+        let i = readyThreads.indexOf(c);
         if (i === -1)
             busyThreads--;
         else
@@ -233,7 +233,7 @@ function createWSServer(config) {
     config = config || {};
 
     // If we're listening to a UNIX-domain socket, delete any old one
-    var port = config.port || defaultWSConfig.port;
+    const port = config.port || defaultWSConfig.port;
     if (typeof port === "string") {
         try {
             fs.unlinkSync(port);
@@ -249,25 +249,24 @@ function createWSServer(config) {
     // And listen for upgrade requests
     hs.on("upgrade", (req, sock) => {
         // Find the root
-        var host = "host:" + req.headers.host;
-        var root;
+        const host = "host:" + req.headers.host;
+        let root;
         if (host in config.root)
             root = config.root[host];
         else
             root = config.root["default"];
 
         // Find the file
-        var fname = req.url.replace(/\?.*/, "");
+        let fname = req.url.replace(/\?.*/, "");
         try {
             fname = decodeURIComponent(fname);
         } catch (ex) {
             return sock.destroy();
         }
         fname = root + path.normalize("/" + fname) + ".js";
-        console.error(fname);
 
         // Get the stats
-        var sbuf = null;
+        let sbuf = null;
         try {
             sbuf = fs.statSync(fname);
         } catch (ex) {}
@@ -278,7 +277,7 @@ function createWSServer(config) {
         }
 
         // Check
-        var wsThread = wsThreads[fname];
+        let wsThread = wsThreads[fname];
         if (wsThread && wsThread.mtime < sbuf.mtimeMs) {
             // Thread is out of date
             wsThread.c.disconnect();
