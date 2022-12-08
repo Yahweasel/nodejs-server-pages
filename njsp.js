@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Copyright (c) 2020, 2021 Yahweasel
+ * Copyright (c) 2020-2022 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -51,7 +51,7 @@ const errDBSQL = [
 // Create a NODE_PATH variable so that the runner can use the *main* modules
 const childNodePath = (function() {
     let nodePath = ((process.env.NODE_PATH + ":") || "");
-    nodePath += require.main.paths.join(":");
+    nodePath += (require.main || module).paths.join(":");
     return nodePath;
 })();
 
