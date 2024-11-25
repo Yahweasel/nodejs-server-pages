@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/Yahweasel/nodejs-server-pages#readme",
   "dependencies": {
-    "cookie": "^0.5.0",
+    "cookie": "^1.0.2",
     "node-fastcgi": "^2.0.0",
     "sqlite3": "^5.1.6",
     "ws": "^8.13.0"
