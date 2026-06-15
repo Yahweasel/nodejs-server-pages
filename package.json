@@ -27,7 +27,7 @@
   "dependencies": {
     "cookie": "^1.0.2",
     "node-fastcgi": "^2.0.0",
-    "sqlite3": "^5.1.6",
+    "sqlite3": "^6.0.1",
     "ws": "^8.13.0"
   }
 }
